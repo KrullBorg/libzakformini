@@ -31,11 +31,6 @@ G_BEGIN_DECLS
 #define ZAK_FORM_INI_TYPE_PROVIDER zak_form_ini_provider_get_type ()
 G_DECLARE_FINAL_TYPE (ZakFormIniProvider, zak_form_ini_provider, ZAK_FORM_INI, PROVIDER, GObject)
 
-struct _ZakFormIniProviderClass
-{
-	GObjectClass parent_class;
-};
-
 
 ZakFormIniProvider *zak_form_ini_provider_new_from_gkeyfile (GKeyFile *kfile, const gchar *group);
 ZakFormIniProvider *zak_form_ini_provider_new_from_file (const gchar *filename, const gchar *group);

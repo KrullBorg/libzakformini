@@ -46,21 +46,19 @@ static gboolean zak_form_ini_provider_insert (ZakFormIProvider *provider, GPtrAr
 static gboolean zak_form_ini_provider_update (ZakFormIProvider *provider, GPtrArray *elements);
 static gboolean zak_form_ini_provider_delete (ZakFormIProvider *provider, GPtrArray *elements);
 
+typedef struct
+	{
+		GKeyFile *kfile;
+		gchar *group;
+	} ZakFormIniProviderPrivate;
+
 struct _ZakFormIniProvider
 {
 	GObject parent_instance;
 };
 
-#define ZAK_FORM_INI_PROVIDER_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE ((obj), ZAK_FORM_INI_TYPE_PROVIDER, ZakFormIniProviderPrivate))
-
-typedef struct _ZakFormIniProviderPrivate ZakFormIniProviderPrivate;
-struct _ZakFormIniProviderPrivate
-	{
-		GKeyFile *kfile;
-		gchar *group;
-	};
-
 G_DEFINE_TYPE_WITH_CODE (ZakFormIniProvider, zak_form_ini_provider, G_TYPE_OBJECT,
+						 G_ADD_PRIVATE (ZakFormIniProvider)
 						 G_IMPLEMENT_INTERFACE (ZAK_FORM_TYPE_IPROVIDER,
 												zak_form_iprovider_interface_init))
 
@@ -73,14 +71,12 @@ zak_form_ini_provider_class_init (ZakFormIniProviderClass *class)
 	object_class->get_property = zak_form_ini_provider_get_property;
 	object_class->dispose = zak_form_ini_provider_dispose;
 	object_class->finalize = zak_form_ini_provider_finalize;
-
-	g_type_class_add_private (object_class, sizeof (ZakFormIniProviderPrivate));
 }
 
 static void
 zak_form_ini_provider_init (ZakFormIniProvider *zak_form_ini_provider)
 {
-	ZakFormIniProviderPrivate *priv = ZAK_FORM_INI_PROVIDER_GET_PRIVATE (zak_form_ini_provider);
+	ZakFormIniProviderPrivate *priv = zak_form_ini_provider_get_instance_private (zak_form_ini_provider);
 
 	priv->kfile = NULL;
 	priv->group = NULL;
@@ -110,7 +106,7 @@ ZakFormIniProvider
 
 	zak_form_ini_provider = ZAK_FORM_INI_PROVIDER (g_object_new (zak_form_ini_provider_get_type (), NULL));
 
-	priv = ZAK_FORM_INI_PROVIDER_GET_PRIVATE (zak_form_ini_provider);
+	priv = zak_form_ini_provider_get_instance_private (zak_form_ini_provider);
 
 	priv->kfile = g_object_ref (kfile);
 	priv->group = g_strdup (group);
@@ -147,7 +143,7 @@ zak_form_ini_provider_set_property (GObject *object,
                    GParamSpec *pspec)
 {
 	ZakFormIniProvider *zak_form_ini_provider = (ZakFormIniProvider *)object;
-	ZakFormIniProviderPrivate *priv = ZAK_FORM_INI_PROVIDER_GET_PRIVATE (zak_form_ini_provider);
+	ZakFormIniProviderPrivate *priv = zak_form_ini_provider_get_instance_private (zak_form_ini_provider);
 
 	switch (property_id)
 		{
@@ -164,7 +160,7 @@ zak_form_ini_provider_get_property (GObject *object,
                    GParamSpec *pspec)
 {
 	ZakFormIniProvider *zak_form_ini_provider = (ZakFormIniProvider *)object;
-	ZakFormIniProviderPrivate *priv = ZAK_FORM_INI_PROVIDER_GET_PRIVATE (zak_form_ini_provider);
+	ZakFormIniProviderPrivate *priv = zak_form_ini_provider_get_instance_private (zak_form_ini_provider);
 
 	switch (property_id)
 		{
@@ -178,7 +174,7 @@ static void
 zak_form_ini_provider_dispose (GObject *gobject)
 {
 	ZakFormIniProvider *zak_form_ini_provider = (ZakFormIniProvider *)gobject;
-	ZakFormIniProviderPrivate *priv = ZAK_FORM_INI_PROVIDER_GET_PRIVATE (zak_form_ini_provider);
+	ZakFormIniProviderPrivate *priv = zak_form_ini_provider_get_instance_private (zak_form_ini_provider);
 
 
 	GObjectClass *parent_class = g_type_class_peek_parent (G_OBJECT_GET_CLASS (gobject));
@@ -189,7 +185,7 @@ static void
 zak_form_ini_provider_finalize (GObject *gobject)
 {
 	ZakFormIniProvider *zak_form_ini_provider = (ZakFormIniProvider *)gobject;
-	ZakFormIniProviderPrivate *priv = ZAK_FORM_INI_PROVIDER_GET_PRIVATE (zak_form_ini_provider);
+	ZakFormIniProviderPrivate *priv = zak_form_ini_provider_get_instance_private (zak_form_ini_provider);
 
 
 	GObjectClass *parent_class = g_type_class_peek_parent (G_OBJECT_GET_CLASS (gobject));
@@ -320,7 +316,7 @@ zak_form_ini_provider_load (ZakFormIProvider *provider, GPtrArray *elements)
 
 	GValue *value;
 
-	ZakFormIniProviderPrivate *priv = ZAK_FORM_INI_PROVIDER_GET_PRIVATE (provider);
+	ZakFormIniProviderPrivate *priv = zak_form_ini_provider_get_instance_private (ZAK_FORM_INI_PROVIDER (provider));
 
 	ret = TRUE;
 
@@ -334,7 +330,7 @@ zak_form_ini_provider_insert (ZakFormIProvider *provider, GPtrArray *elements)
 
 	GValue *value;
 
-	ZakFormIniProviderPrivate *priv = ZAK_FORM_INI_PROVIDER_GET_PRIVATE (provider);
+	ZakFormIniProviderPrivate *priv = zak_form_ini_provider_get_instance_private (ZAK_FORM_INI_PROVIDER (provider));
 
 	return ret;
 }
@@ -346,7 +342,7 @@ zak_form_ini_provider_update (ZakFormIProvider *provider, GPtrArray *elements)
 
 	GValue *value;
 
-	ZakFormIniProviderPrivate *priv = ZAK_FORM_INI_PROVIDER_GET_PRIVATE (provider);
+	ZakFormIniProviderPrivate *priv = zak_form_ini_provider_get_instance_private (ZAK_FORM_INI_PROVIDER (provider));
 
 
 	return ret;
@@ -357,7 +353,7 @@ zak_form_ini_provider_delete (ZakFormIProvider *provider, GPtrArray *elements)
 {
 	gboolean ret;
 
-	ZakFormIniProviderPrivate *priv = ZAK_FORM_INI_PROVIDER_GET_PRIVATE (provider);
+	ZakFormIniProviderPrivate *priv = zak_form_ini_provider_get_instance_private (ZAK_FORM_INI_PROVIDER (provider));
 
 
 	return ret;
