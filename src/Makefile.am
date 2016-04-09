@@ -15,4 +15,4 @@ libzakformini_include_HEADERS = \
                                 libzakformini.h \
                                 form.h
 
-libzakformgini_includedir = $(includedir)/libzakformini
+libzakformini_includedir = $(includedir)/libzakformini

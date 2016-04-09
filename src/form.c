@@ -103,7 +103,7 @@ zak_form_iprovider_interface_init (ZakFormIProviderInterface *iface)
  * Returns: the newly created #ZakFormIniProvider object.
  */
 ZakFormIniProvider
-*zak_form_ini_provider_new (GKeyFile *kfile, const gchar *group)
+*zak_form_ini_provider_new_from_gkeyfile (GKeyFile *kfile, const gchar *group)
 {
 	ZakFormIniProvider *zak_form_ini_provider;
 	ZakFormIniProviderPrivate *priv;
@@ -114,6 +114,27 @@ ZakFormIniProvider
 
 	priv->kfile = g_object_ref (kfile);
 	priv->group = g_strdup (group);
+
+	return zak_form_ini_provider;
+}
+
+/**
+ * zak_form_ini_provider_new_from_file:
+ * @filename:
+ * @group:
+ *
+ * Returns: the newly created #ZakFormIniProvider object.
+ */
+ZakFormIniProvider
+*zak_form_ini_provider_new_from_file (const gchar *filename, const gchar *group)
+{
+	GKeyFile *kfile;
+
+	ZakFormIniProvider *zak_form_ini_provider;
+
+	kfile = g_key_file_new ();
+	g_key_file_load_from_file (kfile, filename, G_KEY_FILE_NONE, NULL);
+	zak_form_ini_provider = zak_form_ini_provider_new_from_gkeyfile (kfile, group);
 
 	return zak_form_ini_provider;
 }
@@ -230,7 +251,7 @@ static GValue
 
 			if (gdt == NULL)
 				{
-					ret = gda_value_new_null ();
+					ret = zak_utils_gvalue_new_string ("");
 				}
 			else
 				{
@@ -253,7 +274,7 @@ static GValue
 
 			if (gdt == NULL)
 				{
-					ret = gda_value_new_null ();
+					ret = zak_utils_gvalue_new_string ("");
 				}
 			else
 				{
@@ -276,7 +297,7 @@ static GValue
 
 			if (gdt == NULL)
 				{
-					ret = gda_value_new_null ();
+					ret = zak_utils_gvalue_new_string ("");
 				}
 			else
 				{
