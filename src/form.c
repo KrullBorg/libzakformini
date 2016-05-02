@@ -49,6 +49,7 @@ static gboolean zak_form_ini_provider_delete (ZakFormIProvider *provider, GPtrAr
 typedef struct
 	{
 		GKeyFile *kfile;
+		gchar *filename;
 		gchar *group;
 	} ZakFormIniProviderPrivate;
 
@@ -94,12 +95,13 @@ zak_form_iprovider_interface_init (ZakFormIProviderInterface *iface)
 /**
  * zak_form_ini_provider_new_from_gkeyfile:
  * @kfile:
+ * @filename:
  * @group:
  *
  * Returns: the newly created #ZakFormIniProvider object.
  */
 ZakFormIniProvider
-*zak_form_ini_provider_new_from_gkeyfile (GKeyFile *kfile, const gchar *group)
+*zak_form_ini_provider_new_from_gkeyfile (GKeyFile *kfile, const gchar *filename, const gchar *group)
 {
 	ZakFormIniProvider *zak_form_ini_provider;
 	ZakFormIniProviderPrivate *priv;
@@ -108,7 +110,8 @@ ZakFormIniProvider
 
 	priv = zak_form_ini_provider_get_instance_private (zak_form_ini_provider);
 
-	priv->kfile = g_object_ref (kfile);
+	priv->kfile = g_key_file_ref (kfile);
+	priv->filename = g_strdup (filename);
 	priv->group = g_strdup (group);
 
 	return zak_form_ini_provider;
@@ -126,11 +129,38 @@ ZakFormIniProvider
 {
 	GKeyFile *kfile;
 
+	GFile *gf;
+	GFileOutputStream *ostr;
+
+	GError *error;
+
 	ZakFormIniProvider *zak_form_ini_provider;
 
 	kfile = g_key_file_new ();
-	g_key_file_load_from_file (kfile, filename, G_KEY_FILE_NONE, NULL);
-	zak_form_ini_provider = zak_form_ini_provider_new_from_gkeyfile (kfile, group);
+
+	if (!g_file_test (filename, G_FILE_TEST_EXISTS))
+		{
+			/* create the empty file */
+			error = NULL;
+			gf = g_file_new_for_path (filename);
+			ostr = g_file_replace (gf, NULL, FALSE, G_FILE_CREATE_PRIVATE, NULL, &error);
+			if (ostr != NULL)
+				{
+					g_output_stream_close (G_OUTPUT_STREAM (ostr), NULL, NULL);
+					g_object_unref (ostr);
+				}
+			g_object_unref (gf);
+		}
+
+	error = NULL;
+	if (!g_key_file_load_from_file (kfile, filename, G_KEY_FILE_NONE, &error))
+		{
+			g_warning ("Unable to open ini file: «%s»\n. %s",
+					   filename,
+					   error != NULL && error->message != NULL ? error->message : "No details.");
+			return NULL;
+		}
+	zak_form_ini_provider = zak_form_ini_provider_new_from_gkeyfile (kfile, filename, group);
 
 	return zak_form_ini_provider;
 }
@@ -346,6 +376,8 @@ zak_form_ini_provider_insert (ZakFormIProvider *provider, GPtrArray *elements)
 
 	gchar *value;
 
+	GError *error;
+
 	ZakFormIniProviderPrivate *priv = zak_form_ini_provider_get_instance_private (ZAK_FORM_INI_PROVIDER (provider));
 
 	ret = TRUE;
@@ -360,6 +392,15 @@ zak_form_ini_provider_insert (ZakFormIProvider *provider, GPtrArray *elements)
 					g_key_file_set_value (priv->kfile, priv->group,
 										  zak_form_element_get_name (element),
 										  value);
+
+					error = NULL;
+					if (!g_key_file_save_to_file (priv->kfile, priv->filename, &error)
+						|| error != NULL)
+						{
+							g_warning ("Unable to write to file «%s»: %s.",
+									   priv->filename,
+									   error != NULL && error->message != NULL ? error->message : "no details");
+						}
 
 					g_free (value);
 				}
@@ -396,6 +437,15 @@ zak_form_ini_provider_delete (ZakFormIProvider *provider, GPtrArray *elements)
 					g_key_file_remove_key (priv->kfile, priv->group,
 										   zak_form_element_get_name (element),
 										   &error);
+
+					error = NULL;
+					if (!g_key_file_save_to_file (priv->kfile, priv->filename, &error)
+						|| error != NULL)
+						{
+							g_warning ("Unable to write to file «%s»: %s.",
+									   priv->filename,
+									   error != NULL && error->message != NULL ? error->message : "no details");
+						}
 				}
 		}
 

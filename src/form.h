@@ -32,7 +32,7 @@ G_BEGIN_DECLS
 G_DECLARE_FINAL_TYPE (ZakFormIniProvider, zak_form_ini_provider, ZAK_FORM_INI, PROVIDER, GObject)
 
 
-ZakFormIniProvider *zak_form_ini_provider_new_from_gkeyfile (GKeyFile *kfile, const gchar *group);
+ZakFormIniProvider *zak_form_ini_provider_new_from_gkeyfile (GKeyFile *kfile, const gchar *filename, const gchar *group);
 ZakFormIniProvider *zak_form_ini_provider_new_from_file (const gchar *filename, const gchar *group);
 
 
