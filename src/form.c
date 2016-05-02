@@ -20,6 +20,8 @@
 	#include <config.h>
 #endif
 
+#include <locale.h>
+
 #include <libzakform/libzakform.h>
 #include <libzakutils/libzakutils.h>
 
@@ -41,6 +43,8 @@ static void zak_form_ini_provider_get_property (GObject *object,
 static void zak_form_ini_provider_dispose (GObject *gobject);
 static void zak_form_ini_provider_finalize (GObject *gobject);
 
+static gchar *zak_form_ini_provider_get_group (GPtrArray *elements);
+
 static gboolean zak_form_ini_provider_load (ZakFormIProvider *provider, GPtrArray *elements);
 static gboolean zak_form_ini_provider_insert (ZakFormIProvider *provider, GPtrArray *elements);
 static gboolean zak_form_ini_provider_update (ZakFormIProvider *provider, GPtrArray *elements);
@@ -50,7 +54,6 @@ typedef struct
 	{
 		GKeyFile *kfile;
 		gchar *filename;
-		gchar *group;
 	} ZakFormIniProviderPrivate;
 
 struct _ZakFormIniProvider
@@ -80,7 +83,7 @@ zak_form_ini_provider_init (ZakFormIniProvider *zak_form_ini_provider)
 	ZakFormIniProviderPrivate *priv = zak_form_ini_provider_get_instance_private (zak_form_ini_provider);
 
 	priv->kfile = NULL;
-	priv->group = NULL;
+	priv->filename = NULL;
 }
 
 static void
@@ -96,12 +99,11 @@ zak_form_iprovider_interface_init (ZakFormIProviderInterface *iface)
  * zak_form_ini_provider_new_from_gkeyfile:
  * @kfile:
  * @filename:
- * @group:
  *
  * Returns: the newly created #ZakFormIniProvider object.
  */
 ZakFormIniProvider
-*zak_form_ini_provider_new_from_gkeyfile (GKeyFile *kfile, const gchar *filename, const gchar *group)
+*zak_form_ini_provider_new_from_gkeyfile (GKeyFile *kfile, const gchar *filename)
 {
 	ZakFormIniProvider *zak_form_ini_provider;
 	ZakFormIniProviderPrivate *priv;
@@ -112,7 +114,6 @@ ZakFormIniProvider
 
 	priv->kfile = g_key_file_ref (kfile);
 	priv->filename = g_strdup (filename);
-	priv->group = g_strdup (group);
 
 	return zak_form_ini_provider;
 }
@@ -120,12 +121,11 @@ ZakFormIniProvider
 /**
  * zak_form_ini_provider_new_from_file:
  * @filename:
- * @group:
  *
  * Returns: the newly created #ZakFormIniProvider object.
  */
 ZakFormIniProvider
-*zak_form_ini_provider_new_from_file (const gchar *filename, const gchar *group)
+*zak_form_ini_provider_new_from_file (const gchar *filename)
 {
 	GKeyFile *kfile;
 
@@ -136,7 +136,7 @@ ZakFormIniProvider
 
 	ZakFormIniProvider *zak_form_ini_provider;
 
-	kfile = g_key_file_new ();
+	g_return_val_if_fail (filename != NULL && g_strcmp0 (filename, "") != 0, NULL);
 
 	if (!g_file_test (filename, G_FILE_TEST_EXISTS))
 		{
@@ -152,6 +152,8 @@ ZakFormIniProvider
 			g_object_unref (gf);
 		}
 
+	kfile = g_key_file_new ();
+
 	error = NULL;
 	if (!g_key_file_load_from_file (kfile, filename, G_KEY_FILE_NONE, &error))
 		{
@@ -160,7 +162,7 @@ ZakFormIniProvider
 					   error != NULL && error->message != NULL ? error->message : "No details.");
 			return NULL;
 		}
-	zak_form_ini_provider = zak_form_ini_provider_new_from_gkeyfile (kfile, filename, group);
+	zak_form_ini_provider = zak_form_ini_provider_new_from_gkeyfile (kfile, filename);
 
 	return zak_form_ini_provider;
 }
@@ -244,7 +246,7 @@ static gchar
 
 			unformatted = zak_utils_unformat_money_full (value, thousands_saparator, NULL);
 
-			ret = zak_utils_format_money_full (unformatted, 0, "", "");
+			ret = zak_utils_format_money_full (unformatted, 0, "", NULL);
 		}
 	else if (g_ascii_strcasecmp (type, "float") == 0)
 		{
@@ -257,7 +259,15 @@ static gchar
 
 			unformatted = zak_utils_unformat_money_full (value, thousands_saparator, currency_symbol);
 
-			ret = zak_utils_format_money_full (unformatted, 10, "", "");
+			char *cur = g_strdup (setlocale (LC_NUMERIC, NULL));
+
+			setlocale (LC_NUMERIC, "C");
+
+			ret = g_strdup_printf ("%f", unformatted);
+
+			setlocale (LC_NUMERIC, cur);
+
+			g_free (cur);
 		}
 	else if (g_ascii_strcasecmp (type, "string") == 0)
 		{
@@ -340,6 +350,44 @@ static gchar
 	return ret;
 }
 
+static gchar
+*zak_form_ini_provider_get_group (GPtrArray *elements)
+{
+	gchar *ret;
+
+	GString *key;
+
+	gchar *value;
+
+	guint i;
+
+	key = g_string_new ("");
+	for (i = 0; i < elements->len; i++)
+		{
+			ZakFormElement *element = (ZakFormElement *)g_ptr_array_index (elements, i);
+
+			if (zak_form_element_get_is_key (element))
+				{
+					value = zak_form_ini_provider_new_gvalue_from_element (element);
+					g_string_append_printf (key, "|%s", value);
+					g_free (value);
+				}
+		}
+
+	if (key->len > 0)
+		{
+			ret = g_strdup (key->str + 1);
+		}
+	else
+		{
+			ret = g_strdup ("THE_KEY");
+		}
+
+	g_string_free (key, TRUE);
+
+	return ret;
+}
+
 static gboolean
 zak_form_ini_provider_load (ZakFormIProvider *provider, GPtrArray *elements)
 {
@@ -347,11 +395,15 @@ zak_form_ini_provider_load (ZakFormIProvider *provider, GPtrArray *elements)
 
 	guint i;
 
+	gchar *group;
+
 	GError *error;
 
 	ZakFormIniProviderPrivate *priv = zak_form_ini_provider_get_instance_private (ZAK_FORM_INI_PROVIDER (provider));
 
 	ret = TRUE;
+
+	group = zak_form_ini_provider_get_group (elements);
 
 	for (i = 0; i < elements->len; i++)
 		{
@@ -359,10 +411,12 @@ zak_form_ini_provider_load (ZakFormIProvider *provider, GPtrArray *elements)
 			if (zak_form_element_get_to_load (element))
 				{
 					error = NULL;
-					zak_form_element_set_value (element, g_key_file_get_value (priv->kfile, priv->group, zak_form_element_get_name (element), &error));
+					zak_form_element_set_value (element, g_key_file_get_value (priv->kfile, group, zak_form_element_get_name (element), &error));
 					zak_form_element_set_as_original_value (element);
 				}
 		}
+
+	g_free (group);
 
 	return ret;
 }
@@ -375,12 +429,15 @@ zak_form_ini_provider_insert (ZakFormIProvider *provider, GPtrArray *elements)
 	guint i;
 
 	gchar *value;
+	gchar *group;
 
 	GError *error;
 
 	ZakFormIniProviderPrivate *priv = zak_form_ini_provider_get_instance_private (ZAK_FORM_INI_PROVIDER (provider));
 
 	ret = TRUE;
+
+	group = zak_form_ini_provider_get_group (elements);
 
 	for (i = 0; i < elements->len; i++)
 		{
@@ -389,9 +446,9 @@ zak_form_ini_provider_insert (ZakFormIProvider *provider, GPtrArray *elements)
 				{
 					value = zak_form_ini_provider_new_gvalue_from_element (element);
 
-					g_key_file_set_value (priv->kfile, priv->group,
-										  zak_form_element_get_name (element),
-										  value);
+					g_key_file_set_string (priv->kfile, group,
+										   zak_form_element_get_name (element),
+										   value);
 
 					error = NULL;
 					if (!g_key_file_save_to_file (priv->kfile, priv->filename, &error)
@@ -405,6 +462,8 @@ zak_form_ini_provider_insert (ZakFormIProvider *provider, GPtrArray *elements)
 					g_free (value);
 				}
 		}
+
+	g_free (group);
 
 	return ret;
 }
@@ -420,6 +479,8 @@ zak_form_ini_provider_delete (ZakFormIProvider *provider, GPtrArray *elements)
 {
 	gboolean ret;
 
+	gchar *group;
+
 	guint i;
 
 	GError *error;
@@ -428,13 +489,15 @@ zak_form_ini_provider_delete (ZakFormIProvider *provider, GPtrArray *elements)
 
 	ret = TRUE;
 
+	group = zak_form_ini_provider_get_group (elements);
+
 	for (i = 0; i < elements->len; i++)
 		{
 			ZakFormElement *element = (ZakFormElement *)g_ptr_array_index (elements, i);
 			if (zak_form_element_get_to_save (element))
 				{
 					error = NULL;
-					g_key_file_remove_key (priv->kfile, priv->group,
+					g_key_file_remove_key (priv->kfile, group,
 										   zak_form_element_get_name (element),
 										   &error);
 
@@ -448,6 +511,8 @@ zak_form_ini_provider_delete (ZakFormIProvider *provider, GPtrArray *elements)
 						}
 				}
 		}
+
+	g_free (group);
 
 	return ret;
 }
