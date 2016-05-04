@@ -411,7 +411,7 @@ zak_form_ini_provider_load (ZakFormIProvider *provider, GPtrArray *elements)
 			if (zak_form_element_get_to_load (element))
 				{
 					error = NULL;
-					zak_form_element_set_value (element, g_key_file_get_value (priv->kfile, group, zak_form_element_get_name (element), &error));
+					zak_form_element_set_value (element, g_key_file_get_string (priv->kfile, group, zak_form_element_get_name (element), &error));
 					zak_form_element_set_as_original_value (element);
 				}
 		}
