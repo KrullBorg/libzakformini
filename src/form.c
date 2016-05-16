@@ -225,132 +225,6 @@ zak_form_ini_provider_finalize (GObject *gobject)
 }
 
 static gchar
-*zak_form_ini_provider_new_gvalue_from_element (ZakFormElement *element)
-{
-	gchar *ret;
-
-	gchar *value;
-	gchar *type;
-	GHashTable *format;
-
-	value = zak_form_element_get_value (element);
-	type = zak_form_element_get_provider_type (element);
-	format = zak_form_element_get_format (element);
-
-	if (g_ascii_strcasecmp (type, "integer") == 0)
-		{
-			gchar *thousands_saparator;
-			gdouble unformatted;
-
-			thousands_saparator = (gchar *)g_hash_table_lookup (format, "thousands_separator");
-
-			unformatted = zak_utils_unformat_money_full (value, thousands_saparator, NULL);
-
-			ret = zak_utils_format_money_full (unformatted, 0, "", NULL);
-		}
-	else if (g_ascii_strcasecmp (type, "float") == 0)
-		{
-			gchar *thousands_saparator;
-			gchar *currency_symbol;
-			gdouble unformatted;
-
-			thousands_saparator = (gchar *)g_hash_table_lookup (format, "thousands_separator");
-			currency_symbol = (gchar *)g_hash_table_lookup (format, "currency_symbol");
-
-			unformatted = zak_utils_unformat_money_full (value, thousands_saparator, currency_symbol);
-
-			char *cur = g_strdup (setlocale (LC_NUMERIC, NULL));
-
-			setlocale (LC_NUMERIC, "C");
-
-			ret = g_strdup_printf ("%f", unformatted);
-
-			setlocale (LC_NUMERIC, cur);
-
-			g_free (cur);
-		}
-	else if (g_ascii_strcasecmp (type, "string") == 0)
-		{
-			ret = g_strdup (value);
-		}
-	else if (g_ascii_strcasecmp (type, "boolean") == 0)
-		{
-			ret = g_strdup (g_strcmp0 (value, "TRUE") == 0 ? "1" : "0");
-		}
-	else if (g_ascii_strcasecmp (type, "date") == 0)
-		{
-			GDateTime *gdt;
-
-			gchar *datetime_format;
-
-			datetime_format = (gchar *)g_hash_table_lookup (format, "content");
-			gdt = zak_utils_get_gdatetime_from_string (value, datetime_format);
-
-			if (gdt == NULL)
-				{
-					ret = g_strdup ("");
-				}
-			else
-				{
-					ret = zak_utils_gdatetime_format (gdt, "%F");
-				}
-
-			if (gdt != NULL)
-				{
-					g_date_time_unref (gdt);
-				}
-		}
-	else if (g_ascii_strcasecmp (type, "time") == 0)
-		{
-			GDateTime *gdt;
-
-			gchar *datetime_format;
-
-			datetime_format = (gchar *)g_hash_table_lookup (format, "content");
-			gdt = zak_utils_get_gdatetime_from_string (value, datetime_format);
-
-			if (gdt == NULL)
-				{
-					ret = g_strdup ("");
-				}
-			else
-				{
-					ret = zak_utils_gdatetime_format (gdt, "%T");
-				}
-
-			if (gdt != NULL)
-				{
-					g_date_time_unref (gdt);
-				}
-		}
-	else if (g_ascii_strcasecmp (type, "datetime") == 0)
-		{
-			GDateTime *gdt;
-
-			gchar *datetime_format;
-
-			datetime_format = (gchar *)g_hash_table_lookup (format, "content");
-			gdt = zak_utils_get_gdatetime_from_string (value, datetime_format);
-
-			if (gdt == NULL)
-				{
-					ret = g_strdup ("");
-				}
-			else
-				{
-					ret = zak_utils_gdatetime_format (gdt, "%F %T");
-				}
-
-			if (gdt != NULL)
-				{
-					g_date_time_unref (gdt);
-				}
-		}
-
-	return ret;
-}
-
-static gchar
 *zak_form_ini_provider_get_group (GPtrArray *elements)
 {
 	gchar *ret;
@@ -368,7 +242,7 @@ static gchar
 
 			if (zak_form_element_get_is_key (element))
 				{
-					value = zak_form_ini_provider_new_gvalue_from_element (element);
+					value = zak_form_element_unformat (element, NULL);
 					g_string_append_printf (key, "|%s", value);
 					g_free (value);
 				}
@@ -444,7 +318,7 @@ zak_form_ini_provider_insert (ZakFormIProvider *provider, GPtrArray *elements)
 			ZakFormElement *element = (ZakFormElement *)g_ptr_array_index (elements, i);
 			if (zak_form_element_get_to_save (element))
 				{
-					value = zak_form_ini_provider_new_gvalue_from_element (element);
+					value = zak_form_element_unformat (element, NULL);
 
 					g_key_file_set_string (priv->kfile, group,
 										   zak_form_element_get_name (element),
