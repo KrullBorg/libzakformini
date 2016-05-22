@@ -1,0 +1,24 @@
+Source: libzakformini
+Priority: optional
+Maintainer: Andrea Zagli <azagli@libero.it>
+Build-Depends: debhelper (>=9), libzakform-dev, intltool, pkg-config, gtk-doc-tools
+Standards-Version: 3.9.8
+Section: libs
+Homepage: http://saetta.ns0.it
+#Vcs-Git: git://anonscm.debian.org/collab-maint/libzakformini.git
+#Vcs-Browser: https://anonscm.debian.org/cgit/collab-maint/libzakformini.git
+
+Package: libzakformini-dev
+Section: libdevel
+Architecture: any
+Depends: libzakformini (= ${binary:Version}), ${misc:Depends}, libzakform-dev
+Description: Provider for libzakform based on ini files - develepment files
+ Provider for libzakform based on ini files.
+ .
+ Development files.
+
+Package: libzakformini
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libzakform
+Description: Provider for libzakform based on ini files
+ Provider for libzakform based on ini files.
