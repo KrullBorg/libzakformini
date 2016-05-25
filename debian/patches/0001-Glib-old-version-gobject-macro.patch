@@ -1,0 +1,156 @@
+From: Andrea Zagli <azagli@libero.it>
+Date: Wed, 25 May 2016 16:14:18 +0200
+Subject: Glib old version - gobject macro.
+
+---
+ src/form.c | 28 +++++++++++++---------------
+ src/form.h | 22 ++++++++++++++++++++--
+ 2 files changed, 33 insertions(+), 17 deletions(-)
+
+diff --git a/src/form.c b/src/form.c
+index 86d2daa..6842171 100644
+--- a/src/form.c
++++ b/src/form.c
+@@ -50,19 +50,15 @@ static gboolean zak_form_ini_provider_insert (ZakFormIProvider *provider, GPtrAr
+ static gboolean zak_form_ini_provider_update (ZakFormIProvider *provider, GPtrArray *elements);
+ static gboolean zak_form_ini_provider_delete (ZakFormIProvider *provider, GPtrArray *elements);
+ 
++#define ZAK_FORM_INI_PROVIDER_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE ((obj), ZAK_FORM_INI_TYPE_PROVIDER, ZakFormIniProviderPrivate))
++
+ typedef struct
+ 	{
+ 		GKeyFile *kfile;
+ 		gchar *filename;
+ 	} ZakFormIniProviderPrivate;
+ 
+-struct _ZakFormIniProvider
+-{
+-	GObject parent_instance;
+-};
+-
+ G_DEFINE_TYPE_WITH_CODE (ZakFormIniProvider, zak_form_ini_provider, G_TYPE_OBJECT,
+-						 G_ADD_PRIVATE (ZakFormIniProvider)
+ 						 G_IMPLEMENT_INTERFACE (ZAK_FORM_TYPE_IPROVIDER,
+ 												zak_form_iprovider_interface_init))
+ 
+@@ -75,12 +71,14 @@ zak_form_ini_provider_class_init (ZakFormIniProviderClass *class)
+ 	object_class->get_property = zak_form_ini_provider_get_property;
+ 	object_class->dispose = zak_form_ini_provider_dispose;
+ 	object_class->finalize = zak_form_ini_provider_finalize;
++
++	g_type_class_add_private (object_class, sizeof (ZakFormIniProviderPrivate));
+ }
+ 
+ static void
+ zak_form_ini_provider_init (ZakFormIniProvider *zak_form_ini_provider)
+ {
+-	ZakFormIniProviderPrivate *priv = zak_form_ini_provider_get_instance_private (zak_form_ini_provider);
++	ZakFormIniProviderPrivate *priv = ZAK_FORM_INI_PROVIDER_GET_PRIVATE (zak_form_ini_provider);
+ 
+ 	priv->kfile = NULL;
+ 	priv->filename = NULL;
+@@ -110,7 +108,7 @@ ZakFormIniProvider
+ 
+ 	zak_form_ini_provider = ZAK_FORM_INI_PROVIDER (g_object_new (zak_form_ini_provider_get_type (), NULL));
+ 
+-	priv = zak_form_ini_provider_get_instance_private (zak_form_ini_provider);
++	priv = ZAK_FORM_INI_PROVIDER_GET_PRIVATE (zak_form_ini_provider);
+ 
+ 	priv->kfile = g_key_file_ref (kfile);
+ 	priv->filename = g_strdup (filename);
+@@ -175,7 +173,7 @@ zak_form_ini_provider_set_property (GObject *object,
+                    GParamSpec *pspec)
+ {
+ 	ZakFormIniProvider *zak_form_ini_provider = (ZakFormIniProvider *)object;
+-	ZakFormIniProviderPrivate *priv = zak_form_ini_provider_get_instance_private (zak_form_ini_provider);
++	ZakFormIniProviderPrivate *priv = ZAK_FORM_INI_PROVIDER_GET_PRIVATE (zak_form_ini_provider);
+ 
+ 	switch (property_id)
+ 		{
+@@ -192,7 +190,7 @@ zak_form_ini_provider_get_property (GObject *object,
+                    GParamSpec *pspec)
+ {
+ 	ZakFormIniProvider *zak_form_ini_provider = (ZakFormIniProvider *)object;
+-	ZakFormIniProviderPrivate *priv = zak_form_ini_provider_get_instance_private (zak_form_ini_provider);
++	ZakFormIniProviderPrivate *priv = ZAK_FORM_INI_PROVIDER_GET_PRIVATE (zak_form_ini_provider);
+ 
+ 	switch (property_id)
+ 		{
+@@ -206,7 +204,7 @@ static void
+ zak_form_ini_provider_dispose (GObject *gobject)
+ {
+ 	ZakFormIniProvider *zak_form_ini_provider = (ZakFormIniProvider *)gobject;
+-	ZakFormIniProviderPrivate *priv = zak_form_ini_provider_get_instance_private (zak_form_ini_provider);
++	ZakFormIniProviderPrivate *priv = ZAK_FORM_INI_PROVIDER_GET_PRIVATE (zak_form_ini_provider);
+ 
+ 
+ 	GObjectClass *parent_class = g_type_class_peek_parent (G_OBJECT_GET_CLASS (gobject));
+@@ -217,7 +215,7 @@ static void
+ zak_form_ini_provider_finalize (GObject *gobject)
+ {
+ 	ZakFormIniProvider *zak_form_ini_provider = (ZakFormIniProvider *)gobject;
+-	ZakFormIniProviderPrivate *priv = zak_form_ini_provider_get_instance_private (zak_form_ini_provider);
++	ZakFormIniProviderPrivate *priv = ZAK_FORM_INI_PROVIDER_GET_PRIVATE (zak_form_ini_provider);
+ 
+ 
+ 	GObjectClass *parent_class = g_type_class_peek_parent (G_OBJECT_GET_CLASS (gobject));
+@@ -273,7 +271,7 @@ zak_form_ini_provider_load (ZakFormIProvider *provider, GPtrArray *elements)
+ 
+ 	GError *error;
+ 
+-	ZakFormIniProviderPrivate *priv = zak_form_ini_provider_get_instance_private (ZAK_FORM_INI_PROVIDER (provider));
++	ZakFormIniProviderPrivate *priv = ZAK_FORM_INI_PROVIDER_GET_PRIVATE (ZAK_FORM_INI_PROVIDER (provider));
+ 
+ 	ret = TRUE;
+ 
+@@ -307,7 +305,7 @@ zak_form_ini_provider_insert (ZakFormIProvider *provider, GPtrArray *elements)
+ 
+ 	GError *error;
+ 
+-	ZakFormIniProviderPrivate *priv = zak_form_ini_provider_get_instance_private (ZAK_FORM_INI_PROVIDER (provider));
++	ZakFormIniProviderPrivate *priv = ZAK_FORM_INI_PROVIDER_GET_PRIVATE (ZAK_FORM_INI_PROVIDER (provider));
+ 
+ 	ret = TRUE;
+ 
+@@ -359,7 +357,7 @@ zak_form_ini_provider_delete (ZakFormIProvider *provider, GPtrArray *elements)
+ 
+ 	GError *error;
+ 
+-	ZakFormIniProviderPrivate *priv = zak_form_ini_provider_get_instance_private (ZAK_FORM_INI_PROVIDER (provider));
++	ZakFormIniProviderPrivate *priv = ZAK_FORM_INI_PROVIDER_GET_PRIVATE (ZAK_FORM_INI_PROVIDER (provider));
+ 
+ 	ret = TRUE;
+ 
+diff --git a/src/form.h b/src/form.h
+index 39e1654..0c91d8f 100644
+--- a/src/form.h
++++ b/src/form.h
+@@ -28,8 +28,26 @@
+ G_BEGIN_DECLS
+ 
+ 
+-#define ZAK_FORM_INI_TYPE_PROVIDER zak_form_ini_provider_get_type ()
+-G_DECLARE_FINAL_TYPE (ZakFormIniProvider, zak_form_ini_provider, ZAK_FORM_INI, PROVIDER, GObject)
++#define ZAK_FORM_INI_TYPE_PROVIDER                 (zak_form_ini_provider_get_type ())
++#define ZAK_FORM_INI_PROVIDER(obj)                 (G_TYPE_CHECK_INSTANCE_CAST ((obj), ZAK_FORM_INI_TYPE_PROVIDER, ZakFormIniProvider))
++#define ZAK_FORM_INI_PROVIDER_CLASS(klass)         (G_TYPE_CHECK_CLASS_CAST ((klass), ZAK_FORM_INI_TYPE_PROVIDER, ZakFormIniProviderClass))
++#define ZAK_FORM_INI_IS_PROVIDER(obj)              (G_TYPE_CHECK_INSTANCE_TYPE ((obj), ZAK_FORM_INI_TYPE_PROVIDER))
++#define ZAK_FORM_INI_IS_PROVIDER_CLASS(klass)      (G_TYPE_CHECK_CLASS_TYPE ((klass), ZAK_FORM_INI_TYPE_PROVIDER))
++#define ZAK_FORM_INI_PROVIDER_GET_CLASS(obj)       (G_TYPE_INSTANCE_GET_CLASS ((obj), ZAK_FORM_INI_TYPE_PROVIDER, ZakFormIniProviderClass))
++
++
++typedef struct _ZakFormIniProvider ZakFormIniProvider;
++typedef struct _ZakFormIniProviderClass ZakFormIniProviderClass;
++
++struct _ZakFormIniProvider
++	{
++		GObject parent;
++	};
++
++struct _ZakFormIniProviderClass
++	{
++		GObjectClass parent_class;
++	};
+ 
+ 
+ ZakFormIniProvider *zak_form_ini_provider_new_from_gkeyfile (GKeyFile *kfile, const gchar *filename);
